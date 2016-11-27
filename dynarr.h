@@ -33,4 +33,10 @@ bool da_insert(DynArr *da, void *data) {
 	return false;
 }
 
+void da_print(DynArr *da) {
+	for (u64 i = 0; i < da->size; i++) {
+		printf("\t%p\n", da->buffer[i]);
+	}
+}
+
 #endif
