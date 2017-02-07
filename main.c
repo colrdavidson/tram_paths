@@ -7,6 +7,7 @@
 #include "common.h"
 #include "hashmap.h"
 #include "dynarr.h"
+#include "pqueue.h"
 
 char *file_next_line(File *file, u64 *idx) {
 	if (*idx >= file->size) {
@@ -30,7 +31,6 @@ char *file_next_line(File *file, u64 *idx) {
 	return line;
 }
 
-
 DynArr *read_all_lines(File *file) {
 	DynArr *da = da_init();
 	u64 idx = 0;
@@ -49,91 +49,104 @@ void print_lines(DynArr *da) {
 	}
 }
 
-typedef struct ConnNode {
-	char *station;
-	char *line1;
-	char *line2;
-	float time;
-} ConnNode;
-
 typedef struct StationNode {
 	char *name;
+	char *line;
 	DynArr *conn;
 } StationNode;
 
-StationNode *new_station(char *name) {
+typedef struct ConnNode {
+	StationNode *station;
+	f32 time;
+} ConnNode;
+
+StationNode *new_station(char *name, char *line) {
 	StationNode *node = (StationNode *)malloc(sizeof(StationNode));
-	node->name = name;
+	node->name = strdup(name);
+	node->line = strdup(line);
 	node->conn = da_init();
 	return node;
 }
 
-ConnNode *new_connection(char *station, char *line1, char *line2, float time) {
+ConnNode *new_connection(StationNode *station, f32 time) {
 	ConnNode *node = (ConnNode *)malloc(sizeof(ConnNode));
 	node->station = station;
-	node->line1 = line1;
-	node->line2 = line2;
 	node->time = time;
 	return node;
 }
 
 void print_connections(DynArr *conn) {
 	for (u64 i = 0; i < conn->size; i++) {
-		ConnNode *node = (ConnNode *)conn->buffer[i];
-		printf("[%s] -> [%s] %s in %.2gs\n", node->line1, node->line2, node->station, node->time);
+		ConnNode *node = (ConnNode *)(conn->buffer[i]);
+		printf("%s %s in %.2gs\n", node->station->line, node->station->name, node->time);
 	}
+	puts("");
 }
 
 void print_station_map(HashMap *hm) {
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
 		HMNode *bucket = hm->map[hm->idx_map[i]];
-		printf("Station %s\n---------\n", bucket->key);
-		print_connections(((StationNode *)bucket->data)->conn);
+		StationNode *station = ((StationNode *)bucket->data);
+		printf("Station %s | %s\n---------\n", station->name, station->line);
+		print_connections(station->conn);
+
 		while (bucket->next != NULL) {
-			printf("Station %s\n---------\n", bucket->key);
-			print_connections(((StationNode *)bucket->next->data)->conn);
+			StationNode *station = ((StationNode *)bucket->next->data);
+			printf("Station %s | %s\n---------\n", station->name, station->line);
+			print_connections(station->conn);
 			bucket = bucket->next;
 		}
-		puts("");
+	}
+}
+
+void print_station_names(HashMap *hm) {
+	for (u64 i = 0; i < hm->idx_map_size; i++) {
+		HMNode *bucket = hm->map[hm->idx_map[i]];
+		StationNode *station = ((StationNode *)bucket->data);
+		printf("Station %s | %s\n", station->name, station->line);
+		while (bucket->next != NULL) {
+			StationNode *station = ((StationNode *)bucket->data);
+			printf("Station %s | %s\n", station->name, station->line);
+			bucket = bucket->next;
+		}
 	}
 }
 
 int main() {
 	File *station_file = read_file("stations.log");
 	DynArr *file_lines = read_all_lines(station_file);
-	DynArr *inserted_stations = da_init();
 	HashMap *map = hm_init();
+	u64 num_stations = 0;
 
 	for (u64 i = 0; i < file_lines->size; i++) {
-		char *station1 = malloc(sizeof(char) * 256);
-		char *station2 = malloc(sizeof(char) * 256);
-		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %*[^','], %256[^','], %*[^','], %*s", station1, station2);
+		char station1[257] = {0};
+		char station2[257] = {0};
+		char line1[257] = {0};
+		char line2[257] = {0};
+		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %*s", station1, line1, station2, line2);
 
-		bool station1_inserted = hm_insert(&map, station1, (void *)new_station(station1));
-		bool station2_inserted = hm_insert(&map, station2, (void *)new_station(station2));
-
-		if (!station1_inserted) {
-			free(station1);
-		}
-
-		if (!station2_inserted) {
-			free(station2);
-		}
+		char *lookup1 = station_lookup(station1, line1);
+		char *lookup2 = station_lookup(station2, line2);
+		num_stations += hm_insert(&map, lookup1, new_station(station1, line1));
+		num_stations += hm_insert(&map, lookup2, new_station(station2, line2));
 	}
 
 	for (u64 i = 0; i < file_lines->size; i++) {
-		char *station1 = malloc(sizeof(char) * 256);
-		char *line1 = malloc(sizeof(char) * 256);
-		char *station2 = malloc(sizeof(char) * 256);
-		char *line2 = malloc(sizeof(char) * 256);
-		char *time = malloc(sizeof(char) * 256);
+		char station1[257] = {0};
+		char station2[257] = {0};
+		char time[257] = {0};
+		char line1[257] = {0};
+		char line2[257] = {0};
 		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %256s", station1, line1, station2, line2, time);
 
-		da_insert(((StationNode *)hm_get(map, station1))->conn, new_connection(station2, line1, line2, strtof(time, NULL)));
-		da_insert(((StationNode *)hm_get(map, station2))->conn, new_connection(station1, line2, line1, strtof(time, NULL)));
+		char *lookup1 = station_lookup(station1, line1);
+		char *lookup2 = station_lookup(station2, line2);
+		da_insert(((StationNode *)hm_get(map, lookup1))->conn, new_connection(hm_get(map, lookup2), strtof(time, NULL)));
+	    da_insert(((StationNode *)hm_get(map, lookup2))->conn, new_connection(hm_get(map, lookup1), strtof(time, NULL)));
 	}
 
-	print_station_map(map);
+	PriorityQueue *frontier = pq_init();
+	pq_push(frontier, hm_get(map, "M~YELLOW"), 0);
 
 	return 0;
 }

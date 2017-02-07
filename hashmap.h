@@ -16,13 +16,12 @@ typedef struct HashMap {
 } HashMap;
 
 HashMap *hm_sized_init(u64 capacity) {
-	HashMap *hm = (HashMap *)malloc(sizeof(HashMap));
+	HashMap *hm = (HashMap *)calloc(1, sizeof(HashMap));
 	hm->size = 0;
 	hm->idx_map_size = 0;
 	hm->capacity = capacity;
-	hm->map = (HMNode **)malloc(sizeof(HMNode *) * hm->capacity);
-	hm->idx_map = (u64 *)malloc(sizeof(u64) * hm->capacity);
-	memset(hm->map, 0, sizeof(HMNode *) * hm->capacity);
+	hm->map = (HMNode **)calloc(hm->capacity, sizeof(HMNode *));
+	hm->idx_map = (u64 *)calloc(hm->capacity, sizeof(u64));
 
 	return hm;
 }
@@ -63,7 +62,7 @@ u64 hm_hash(HashMap *hm, char *key) {
 HMNode *new_hmnode(char *key, void *value) {
 	HMNode *tmp = (HMNode *)malloc(sizeof(HMNode));
 	tmp->data = value;
-	tmp->key = key;
+	tmp->key = strdup(key);
 	tmp->next = NULL;
 	return tmp;
 }
@@ -92,6 +91,10 @@ bool hm_insert(HashMap **hm, char *key, void *value) {
 			}
 			tmp = tmp->next;
 		}
+		if (strcmp(tmp->key, key) == 0) {
+			DEBUG_PRINT("key %s @ idx %llu already exists!\n", key, idx);
+			return false;
+		}
 
 		DEBUG_PRINT("inserting new HMNode %s @ %llu\n", key, idx);
 		tmp->next = new_hmnode(key, value);
@@ -105,7 +108,7 @@ bool hm_insert(HashMap **hm, char *key, void *value) {
 }
 
 HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
-	DEBUG_PRINT("growing capacity from %llu to %llu because size is %llu\n", hm->capacity, hm->capacity * 2, hm->size);
+	DEBUG_PRINT("[HM] growing capacity from %llu to %llu because size is %llu\n", hm->capacity, hm->capacity * 2, hm->size);
 	HashMap *new_hm = hm_sized_init(capacity);
 
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
@@ -152,6 +155,5 @@ void *hm_get(HashMap *hm, char *key) {
 		return NULL;
 	}
 }
-
 
 #endif

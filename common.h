@@ -9,6 +9,7 @@
 #define DEBUG_PRINT(fmt, args...)
 #endif
 
+typedef float f32;
 typedef uint64_t u64;
 typedef uint32_t u32;
 typedef u32 bool;
@@ -65,4 +66,12 @@ char *file_to_string(const char *filename) {
 
 	fclose(file);
 	return file_string;
+}
+
+char *station_lookup(char *station, char *line) {
+	char *lookup_str = calloc(strlen(station) + strlen(line) + 2, sizeof(char));
+	strcat(lookup_str, station);
+	strcat(lookup_str, "~");
+	strcat(lookup_str, line);
+	return lookup_str;
 }
