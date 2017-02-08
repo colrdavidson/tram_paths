@@ -55,17 +55,21 @@ typedef struct Route {
 	HashMap *transit_times;
 	f32 accum_time;
 	char *start;
+	char *start_line;
 	char *end;
+	char *end_line;
 } Route;
 
-Route *new_route(DynArr *path, HashMap *from_data, HashMap *transit_times, f32 accum_time, char *start, char *end) {
+Route *new_route(DynArr *path, HashMap *from_data, HashMap *transit_times, f32 accum_time, char *start, char *start_line, char *end, char *end_line) {
 	Route *route = (Route *)malloc(sizeof(Route));
 	route->path = path;
 	route->from_data = from_data;
 	route->transit_times = transit_times;
 	route->accum_time = accum_time;
 	route->start = start;
+	route->start_line = start_line;
 	route->end = end;
+	route->end_line = end_line;
 	return route;
 }
 
@@ -191,20 +195,10 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 		}
 	}
 
-	DynArr *path = da_init();
 	char *current_lookup = station_lookup(end_station->name, end_station->line);
 	f32 accum_time = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f;
 
-	StationNode *current = end_station;
-	da_insert(path, end_station);
-	da_insert(path, current);
-	while (current != start_station) {
-		char *current_lookup = station_lookup(current->name, current->line);
-		current = hm_get(from, current_lookup);
-		da_insert(path, current);
-	}
-
-	return new_route(path, from, accrued_cost, accum_time, start, end);
+	return new_route(NULL, from, accrued_cost, accum_time, start, start_line, end, end_line);
 }
 
 Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) {
@@ -236,6 +230,23 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 			best = new;
 		}
 	}
+
+	// Fill walkable path for best route
+	DynArr *path = da_init();
+	char *start_lookup = station_lookup(start, best->start_line);
+	char *end_lookup = station_lookup(end, best->end_line);
+    StationNode *start_station = hm_get(map, start_lookup);
+    StationNode *end_station = hm_get(map, end_lookup);
+	da_insert(path, end_station);
+	da_insert(path, end_station);
+
+	StationNode *current = end_station;
+	while (current != start_station) {
+		char *current_lookup = station_lookup(current->name, current->line);
+		current = hm_get(best->from_data, current_lookup);
+		da_insert(path, current);
+	}
+	best->path = path;
 
 	return best;
 }

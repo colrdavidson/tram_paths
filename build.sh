@@ -1,1 +1,1 @@
-clang -g main.c -o tram_paths
+clang -O3 main.c -o tram_paths
