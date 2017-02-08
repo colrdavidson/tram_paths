@@ -15,20 +15,8 @@ typedef uint32_t u32;
 typedef u32 bool;
 
 #define BOOL_FMT(x) x ? "true" : "false"
-
-typedef struct FloatWrapper {
-	f32 f;
-} FloatWrapper;
-
-FloatWrapper *fw_init(f32 f) {
-	FloatWrapper *fw = (FloatWrapper *)malloc(sizeof(FloatWrapper));
-	fw->f = f;
-	return fw;
-}
-
-void fw_free(FloatWrapper *fw) {
-	free(fw);
-}
+#define FLOATVOID(x) ((void *)((u64)x))
+#define VOIDFLOAT(x) ((f32)((u64)x))
 
 typedef struct File {
 	char *filename;

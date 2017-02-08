@@ -85,7 +85,7 @@ typedef struct ConnNode {
 } ConnNode;
 
 void free_route(Route *route) {
-	hm_free_data(route->transit_times);
+	hm_free(route->transit_times);
 	hm_free(route->from_data);
 
 	if (route->path != NULL) {
@@ -189,7 +189,7 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 	HashMap *accrued_cost = hm_init();
 
 	hm_insert(&from, start_lookup, NULL);
-	hm_insert(&accrued_cost, start_lookup, fw_init(0.0f));
+	hm_insert(&accrued_cost, start_lookup, FLOATVOID(0.0f));
 
 	while (frontier->heap->size > 0) {
 		StationNode *current = pq_pop(frontier);
@@ -204,10 +204,10 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 			char *current_lookup = station_lookup(current->name, current->line);
 			char *next_lookup = station_lookup(next_conn->station->name, next_conn->station->line);
 
-			f32 new_cost = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f + next_conn->time;
+			f32 new_cost = VOIDFLOAT(hm_get(accrued_cost, current_lookup)) + next_conn->time;
 
-			if (hm_get(accrued_cost, next_lookup) == NULL || new_cost < ((FloatWrapper *)hm_get(accrued_cost, next_lookup))->f) {
-				hm_insert(&accrued_cost, next_lookup, fw_init(new_cost));
+			if (hm_get(accrued_cost, next_lookup) == NULL || new_cost < VOIDFLOAT(hm_get(accrued_cost, next_lookup))) {
+				hm_insert(&accrued_cost, next_lookup, FLOATVOID(new_cost));
 				pq_push(frontier, next_conn->station, new_cost);
 				hm_insert(&from, next_lookup, current);
 			}
@@ -218,7 +218,7 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 	}
 
 	char *current_lookup = station_lookup(end_station->name, end_station->line);
-	f32 accum_time = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f;
+	f32 accum_time = VOIDFLOAT(hm_get(accrued_cost, current_lookup));
 
 	free(start_lookup);
 	free(end_lookup);
