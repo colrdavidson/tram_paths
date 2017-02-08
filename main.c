@@ -270,6 +270,9 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 		}
 	}
 
+	free(route_options->buffer);
+	free(route_options);
+
 	// Fill walkable path for best route
 	DynArr *path = da_init();
 	char *start_lookup = station_lookup(start, best->start_line);
@@ -286,10 +289,11 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 	while (current != start_station) {
 		char *current_lookup = station_lookup(current->name, current->line);
 		current = hm_get(best->from_data, current_lookup);
+        free(current_lookup);
+
 		da_insert(path, current);
 	}
 	best->path = path;
-
 
 	return best;
 }
