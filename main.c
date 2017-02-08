@@ -84,12 +84,29 @@ typedef struct ConnNode {
 	f32 time;
 } ConnNode;
 
+void free_route(Route *route) {
+	hm_free_data(route->transit_times);
+	hm_free(route->from_data);
+
+	if (route->path != NULL) {
+		da_free(route->path);
+	}
+	free(route);
+}
+
 StationNode *new_station(char *name, char *line) {
 	StationNode *node = (StationNode *)malloc(sizeof(StationNode));
 	node->name = strdup(name);
 	node->line = strdup(line);
 	node->conn = da_init();
 	return node;
+}
+
+void free_station(StationNode *node) {
+	free(node->name);
+	free(node->line);
+	da_free(node->conn);
+	free(node);
 }
 
 ConnNode *new_connection(StationNode *station, f32 time) {
@@ -176,7 +193,6 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 
 	while (frontier->heap->size > 0) {
 		StationNode *current = pq_pop(frontier);
-		char *current_lookup = station_lookup(current->name, current->line);
 
 		if (current == end_station) {
 			break;
@@ -184,19 +200,30 @@ Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *
 
 		for (u64 i = 0; i < current->conn->size; i++) {
 			ConnNode *next_conn = ((ConnNode *)current->conn->buffer[i]);
-			f32 new_cost = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f + next_conn->time;
+
+			char *current_lookup = station_lookup(current->name, current->line);
 			char *next_lookup = station_lookup(next_conn->station->name, next_conn->station->line);
+
+			f32 new_cost = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f + next_conn->time;
 
 			if (hm_get(accrued_cost, next_lookup) == NULL || new_cost < ((FloatWrapper *)hm_get(accrued_cost, next_lookup))->f) {
 				hm_insert(&accrued_cost, next_lookup, fw_init(new_cost));
 				pq_push(frontier, next_conn->station, new_cost);
 				hm_insert(&from, next_lookup, current);
 			}
+
+			free(current_lookup);
+			free(next_lookup);
 		}
 	}
 
 	char *current_lookup = station_lookup(end_station->name, end_station->line);
 	f32 accum_time = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f;
+
+	free(start_lookup);
+	free(end_lookup);
+	free(current_lookup);
+	pq_free(frontier);
 
 	return new_route(NULL, from, accrued_cost, accum_time, start, start_line, end, end_line);
 }
@@ -214,6 +241,8 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 		if (hm_get(map, current_end_lookup) != NULL) {
 			da_insert(end_options, line_list->buffer[i]);
 		}
+		free(current_start_lookup);
+		free(current_end_lookup);
 	}
 
 	DynArr *route_options = da_init();
@@ -223,11 +252,21 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 		}
 	}
 
+	da_free(start_options);
+	da_free(end_options);
+
 	Route *best = route_options->buffer[0];
 	for (u64 i = 0; i < route_options->size; i++) {
 		Route *new = route_options->buffer[i];
 		if (best->accum_time > new->accum_time) {
 			best = new;
+		}
+	}
+
+	for (u64 i = 0; i < route_options->size; i++) {
+		Route *cur = ((Route *)route_options->buffer[i]);
+		if (cur != best) {
+			free_route(cur);
 		}
 	}
 
@@ -240,6 +279,9 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 	da_insert(path, end_station);
 	da_insert(path, end_station);
 
+	free(start_lookup);
+	free(end_lookup);
+
 	StationNode *current = end_station;
 	while (current != start_station) {
 		char *current_lookup = station_lookup(current->name, current->line);
@@ -247,6 +289,7 @@ Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) 
 		da_insert(path, current);
 	}
 	best->path = path;
+
 
 	return best;
 }
@@ -305,8 +348,11 @@ int main() {
 	}
 
 	DynArr *line_list = flatten_map_keys(line_map);
-	Route *route = find_best_route(map, line_list, "G", "Z");
-	print_route(route);
+	for (u64 i = 0; i < 100000; i++) {
+		Route *route = find_best_route(map, line_list, "G", "Z");
+		print_route(route);
+		free_route(route);
+	}
 
 	return 0;
 }

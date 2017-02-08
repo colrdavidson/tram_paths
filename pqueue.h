@@ -95,4 +95,9 @@ void *pq_pop(PriorityQueue *pq) {
 	}
 }
 
+void pq_free(PriorityQueue *pq) {
+	da_free_data(pq->heap);
+	free(pq);
+}
+
 #endif

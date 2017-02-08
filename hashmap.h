@@ -156,4 +156,36 @@ void *hm_get(HashMap *hm, char *key) {
 	}
 }
 
+void hn_free(HMNode *bucket) {
+	free(bucket->key);
+	free(bucket);
+}
+
+void hn_free_data(HMNode *bucket) {
+	free(bucket->data);
+	hn_free(bucket);
+}
+
+void hm_free(HashMap *hm) {
+	for (u64 i = 0; i < hm->idx_map_size; i++) {
+		HMNode *bucket = hm->map[hm->idx_map[i]];
+		while (bucket->next != NULL) {
+			HMNode *tmp = bucket->next;
+			hn_free(bucket);
+			bucket = tmp;
+		}
+	}
+}
+
+void hm_free_data(HashMap *hm) {
+	for (u64 i = 0; i < hm->idx_map_size; i++) {
+		HMNode *bucket = hm->map[hm->idx_map[i]];
+		while (bucket->next != NULL) {
+			HMNode *tmp = bucket->next;
+			hn_free_data(bucket);
+			bucket = tmp;
+		}
+	}
+}
+
 #endif

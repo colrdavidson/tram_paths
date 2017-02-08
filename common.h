@@ -26,6 +26,10 @@ FloatWrapper *fw_init(f32 f) {
 	return fw;
 }
 
+void fw_free(FloatWrapper *fw) {
+	free(fw);
+}
+
 typedef struct File {
 	char *filename;
 	char *string;

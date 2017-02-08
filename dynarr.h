@@ -39,4 +39,17 @@ void da_print(DynArr *da) {
 	}
 }
 
+void da_free(DynArr *da) {
+	free(da->buffer);
+	free(da);
+}
+
+void da_free_data(DynArr *da) {
+	for (u64 i = 0; i < da->size; i++) {
+		free(da->buffer[i]);
+	}
+	free(da->buffer);
+	free(da);
+}
+
 #endif
