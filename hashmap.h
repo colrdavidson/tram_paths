@@ -27,7 +27,7 @@ HashMap *hm_sized_init(u64 capacity) {
 }
 
 HashMap *hm_init() {
-	HashMap *hm = hm_sized_init(2);
+	HashMap *hm = hm_sized_init(10);
 	return hm;
 }
 
