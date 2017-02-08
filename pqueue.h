@@ -86,6 +86,7 @@ void *pq_pop(PriorityQueue *pq) {
 		return NULL;
 	} else {
 		void *ret = ((PriorityNode *)pq->heap->buffer[0])->data;
+		free(pq->heap->buffer[0]);
 		pq->heap->buffer[0] = pq->heap->buffer[pq->heap->size - 1];
 		pq->heap->size--;
 		if (pq->heap->size > 0) {

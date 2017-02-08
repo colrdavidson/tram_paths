@@ -107,6 +107,16 @@ bool hm_insert(HashMap **hm, char *key, void *value) {
 	return true;
 }
 
+void hn_free(HMNode *bucket) {
+	free(bucket->key);
+	free(bucket);
+}
+
+void hn_free_data(HMNode *bucket) {
+	free(bucket->data);
+	hn_free(bucket);
+}
+
 HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
 	DEBUG_PRINT("[HM] growing capacity from %llu to %llu because size is %llu\n", hm->capacity, hm->capacity * 2, hm->size);
 	HashMap *new_hm = hm_sized_init(capacity);
@@ -120,10 +130,10 @@ HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
 			hm_insert(&new_hm, tmp->key, tmp->data);
 			prev = tmp;
 			tmp = tmp->next;
-			free(prev);
+			hn_free(prev);
 		}
 		hm_insert(&new_hm, tmp->key, tmp->data);
-		free(tmp);
+		hn_free(tmp);
 	}
 
 	free(hm->map);
@@ -156,15 +166,6 @@ void *hm_get(HashMap *hm, char *key) {
 	}
 }
 
-void hn_free(HMNode *bucket) {
-	free(bucket->key);
-	free(bucket);
-}
-
-void hn_free_data(HMNode *bucket) {
-	free(bucket->data);
-	hn_free(bucket);
-}
 
 void hm_free(HashMap *hm) {
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
@@ -175,6 +176,9 @@ void hm_free(HashMap *hm) {
 			bucket = tmp;
 		}
 	}
+	free(hm->map);
+	free(hm->idx_map);
+	free(hm);
 }
 
 void hm_free_data(HashMap *hm) {
@@ -186,6 +190,9 @@ void hm_free_data(HashMap *hm) {
 			bucket = tmp;
 		}
 	}
+	free(hm->map);
+	free(hm->idx_map);
+	free(hm);
 }
 
 #endif
