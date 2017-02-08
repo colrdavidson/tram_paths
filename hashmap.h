@@ -185,11 +185,15 @@ void hm_free(HashMap *hm) {
 void hm_free_data(HashMap *hm) {
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
 		HMNode *bucket = hm->map[hm->idx_map[i]];
-		while (bucket->next != NULL) {
-			HMNode *tmp = bucket->next;
-			hn_free_data(bucket);
-			bucket = tmp;
+
+		HMNode *tmp = bucket;
+		HMNode *prev = tmp;
+		while (tmp->next != NULL) {
+			prev = tmp;
+			tmp = tmp->next;
+			hn_free_data(prev);
 		}
+		hn_free_data(tmp);
 	}
 	free(hm->map);
 	free(hm->idx_map);
