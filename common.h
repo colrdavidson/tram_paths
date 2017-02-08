@@ -16,6 +16,16 @@ typedef u32 bool;
 
 #define BOOL_FMT(x) x ? "true" : "false"
 
+typedef struct FloatWrapper {
+	f32 f;
+} FloatWrapper;
+
+FloatWrapper *fw_init(f32 f) {
+	FloatWrapper *fw = (FloatWrapper *)malloc(sizeof(FloatWrapper));
+	fw->f = f;
+	return fw;
+}
+
 typedef struct File {
 	char *filename;
 	char *string;

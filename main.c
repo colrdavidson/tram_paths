@@ -49,6 +49,26 @@ void print_lines(DynArr *da) {
 	}
 }
 
+typedef struct Route {
+	DynArr *path;
+	HashMap *from_data;
+	HashMap *transit_times;
+	f32 accum_time;
+	char *start;
+	char *end;
+} Route;
+
+Route *new_route(DynArr *path, HashMap *from_data, HashMap *transit_times, f32 accum_time, char *start, char *end) {
+	Route *route = (Route *)malloc(sizeof(Route));
+	route->path = path;
+	route->from_data = from_data;
+	route->transit_times = transit_times;
+	route->accum_time = accum_time;
+	route->start = start;
+	route->end = end;
+	return route;
+}
+
 typedef struct StationNode {
 	char *name;
 	char *line;
@@ -59,16 +79,6 @@ typedef struct ConnNode {
 	StationNode *station;
 	f32 time;
 } ConnNode;
-
-typedef struct FloatWrapper {
-	f32 f;
-} FloatWrapper;
-
-FloatWrapper *fw_init(f32 f) {
-	FloatWrapper *fw = (FloatWrapper *)malloc(sizeof(FloatWrapper));
-	fw->f = f;
-	return fw;
-}
 
 StationNode *new_station(char *name, char *line) {
 	StationNode *node = (StationNode *)malloc(sizeof(StationNode));
@@ -131,54 +141,25 @@ void print_station_names(HashMap *hm) {
 	}
 }
 
-int main() {
-	File *station_file = read_file("stations.log");
-	DynArr *file_lines = read_all_lines(station_file);
-	HashMap *map = hm_init();
-	DynArr *station_list = da_init();
-
-	for (u64 i = 0; i < file_lines->size; i++) {
-		char station1[257] = {0};
-		char station2[257] = {0};
-		char line1[257] = {0};
-		char line2[257] = {0};
-		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %*s", station1, line1, station2, line2);
-
-		char *lookup1 = station_lookup(station1, line1);
-		char *lookup2 = station_lookup(station2, line2);
-
-		StationNode *station_node1 = new_station(station1, line1);
-		StationNode *station_node2 = new_station(station2, line2);
-
-		bool stat1_new = hm_insert(&map, lookup1, station_node1);
-		bool stat2_new = hm_insert(&map, lookup2, station_node2);
-
-		if (stat1_new) {
-			da_insert(station_list, station_node1);
-		}
-		if (stat2_new) {
-			da_insert(station_list, station_node2);
+DynArr *flatten_map_keys(HashMap *hm) {
+	DynArr *flat = da_init();
+	for (u64 i = 0; i < hm->idx_map_size; i++) {
+		HMNode *bucket = hm->map[hm->idx_map[i]];
+		da_insert(flat, bucket->key);
+		while (bucket->next != NULL) {
+			da_insert(flat, bucket->next->key);
+			bucket = bucket->next;
 		}
 	}
 
-	for (u64 i = 0; i < file_lines->size; i++) {
-		char station1[257] = {0};
-		char station2[257] = {0};
-		char time[257] = {0};
-		char line1[257] = {0};
-		char line2[257] = {0};
-		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %256s", station1, line1, station2, line2, time);
+	return flat;
+}
 
-		char *lookup1 = station_lookup(station1, line1);
-		char *lookup2 = station_lookup(station2, line2);
-		da_insert(((StationNode *)hm_get(map, lookup1))->conn, new_connection(hm_get(map, lookup2), strtof(time, NULL)));
-	    da_insert(((StationNode *)hm_get(map, lookup2))->conn, new_connection(hm_get(map, lookup1), strtof(time, NULL)));
-	}
-
-	char *start_lookup = station_lookup("Z", "VIOLET");
-	char *end_lookup = station_lookup("G", "GREEN");
-    StationNode *start = hm_get(map, start_lookup);
-    StationNode *end = hm_get(map, end_lookup);
+Route *find_route(HashMap *map, char *start, char *start_line, char *end, char *end_line) {
+	char *start_lookup = station_lookup(start, start_line);
+	char *end_lookup = station_lookup(end, end_line);
+    StationNode *start_station = hm_get(map, start_lookup);
+    StationNode *end_station = hm_get(map, end_lookup);
 
 	PriorityQueue *frontier = pq_init();
 	pq_push(frontier, hm_get(map, start_lookup), 0);
@@ -193,7 +174,7 @@ int main() {
 		StationNode *current = pq_pop(frontier);
 		char *current_lookup = station_lookup(current->name, current->line);
 
-		if (current == end) {
+		if (current == end_station) {
 			break;
 		}
 
@@ -211,28 +192,110 @@ int main() {
 	}
 
 	DynArr *path = da_init();
-	char *current_lookup = station_lookup(end->name, end->line);
-	f32 accm_time = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f;
+	char *current_lookup = station_lookup(end_station->name, end_station->line);
+	f32 accum_time = ((FloatWrapper *)hm_get(accrued_cost, current_lookup))->f;
 
-	StationNode *current = end;
-	da_insert(path, end);
+	StationNode *current = end_station;
+	da_insert(path, end_station);
 	da_insert(path, current);
-	while (current != start) {
+	while (current != start_station) {
 		char *current_lookup = station_lookup(current->name, current->line);
 		current = hm_get(from, current_lookup);
 		da_insert(path, current);
 	}
 
+	return new_route(path, from, accrued_cost, accum_time, start, end);
+}
+
+Route *find_best_route(HashMap *map, DynArr *line_list, char *start, char *end) {
+	DynArr *start_options = da_init();
+	DynArr *end_options = da_init();
+
+	for (u64 i = 0; i < line_list->size; i++) {
+    	char *current_start_lookup = station_lookup(start, ((char *)line_list->buffer[i]));
+    	char *current_end_lookup = station_lookup(end, ((char *)line_list->buffer[i]));
+		if (hm_get(map, current_start_lookup) != NULL) {
+			da_insert(start_options, line_list->buffer[i]);
+		}
+		if (hm_get(map, current_end_lookup) != NULL) {
+			da_insert(end_options, line_list->buffer[i]);
+		}
+	}
+
+	DynArr *route_options = da_init();
+	for (u64 i = 0; i < start_options->size; i++) {
+		for (u64 j = 0; j < end_options->size; j++) {
+			da_insert(route_options, find_route(map, start, start_options->buffer[i], end, end_options->buffer[j]));
+		}
+	}
+
+	Route *best = route_options->buffer[0];
+	for (u64 i = 0; i < route_options->size; i++) {
+		Route *new = route_options->buffer[i];
+		if (best->accum_time > new->accum_time) {
+			best = new;
+		}
+	}
+
+	return best;
+}
+
+void print_route(Route *route) {
 	printf("-------------\n");
 	printf("Trip Summary\n");
-	printf("   %s -> %s\n", start->name, end->name);
+	printf("   %s -> %s\n", route->start, route->end);
 	printf("-------------\n\n");
-	for (u64 i = path->size - 1; i > 0; i--) {
-		StationNode *current = (StationNode *)path->buffer[i];
+	for (u64 i = route->path->size - 1; i > 0; i--) {
+		StationNode *current = (StationNode *)route->path->buffer[i];
 		printf("  %s %s\n", current->name, current->line);
 	}
-	printf("\ntravel time: %.2g minutes\n", accm_time);
+	printf("\ntravel time: %.2g minutes\n", route->accum_time);
 	printf("-----------------------\n");
+}
+
+int main() {
+	File *station_file = read_file("stations.log");
+	DynArr *file_lines = read_all_lines(station_file);
+	HashMap *map = hm_init();
+	HashMap *line_map = hm_init();
+
+	for (u64 i = 0; i < file_lines->size; i++) {
+		char station1[257] = {0};
+		char station2[257] = {0};
+		char line1[257] = {0};
+		char line2[257] = {0};
+		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %*s", station1, line1, station2, line2);
+
+		char *lookup1 = station_lookup(station1, line1);
+		char *lookup2 = station_lookup(station2, line2);
+
+		StationNode *station_node1 = new_station(station1, line1);
+		StationNode *station_node2 = new_station(station2, line2);
+
+		hm_insert(&map, lookup1, station_node1);
+		hm_insert(&map, lookup2, station_node2);
+
+		hm_insert(&line_map, line1, (void *)1);
+		hm_insert(&line_map, line2, (void *)1);
+	}
+
+	for (u64 i = 0; i < file_lines->size; i++) {
+		char station1[257] = {0};
+		char station2[257] = {0};
+		char time[257] = {0};
+		char line1[257] = {0};
+		char line2[257] = {0};
+		sscanf((char *)(file_lines->buffer[i]), "%256[^','], %256[^','], %256[^','], %256[^','], %256s", station1, line1, station2, line2, time);
+
+		char *lookup1 = station_lookup(station1, line1);
+		char *lookup2 = station_lookup(station2, line2);
+		da_insert(((StationNode *)hm_get(map, lookup1))->conn, new_connection(hm_get(map, lookup2), strtof(time, NULL)));
+	    da_insert(((StationNode *)hm_get(map, lookup2))->conn, new_connection(hm_get(map, lookup1), strtof(time, NULL)));
+	}
+
+	DynArr *line_list = flatten_map_keys(line_map);
+	Route *route = find_best_route(map, line_list, "G", "Z");
+	print_route(route);
 
 	return 0;
 }
