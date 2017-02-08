@@ -27,7 +27,7 @@ HashMap *hm_sized_init(u64 capacity) {
 }
 
 HashMap *hm_init() {
-	HashMap *hm = hm_sized_init(10);
+	HashMap *hm = hm_sized_init(1);
 	return hm;
 }
 
@@ -76,30 +76,25 @@ bool hm_insert(HashMap **hm, char *key, void *value) {
 
 	u64 idx = hm_hash(*hm, key);
 	if ((*hm)->map[idx] == NULL) {
-		DEBUG_PRINT("inserting new HMNode %s @ %llu\n", key, idx);
-
 		(*hm)->map[idx] = new_hmnode(key, value);
 		(*hm)->idx_map[(*hm)->idx_map_size] = idx;
 		(*hm)->idx_map_size++;
 	} else if (strcmp((*hm)->map[idx]->key, key) != 0) {
-		DEBUG_PRINT("hash collision for key %s, idx %llu\n", key, idx);
 		HMNode *tmp = (*hm)->map[idx];
+
 		while (tmp->next != NULL) {
 			if (strcmp(tmp->key, key) == 0) {
-				DEBUG_PRINT("key %s @ idx %llu already exists!\n", key, idx);
 				return false;
 			}
 			tmp = tmp->next;
 		}
+
 		if (strcmp(tmp->key, key) == 0) {
-			DEBUG_PRINT("key %s @ idx %llu already exists!\n", key, idx);
 			return false;
 		}
 
-		DEBUG_PRINT("inserting new HMNode %s @ %llu\n", key, idx);
 		tmp->next = new_hmnode(key, value);
 	} else {
-		DEBUG_PRINT("key %s @ idx %llu already exists!\n", key, idx);
 		return false;
 	}
 
@@ -130,9 +125,11 @@ HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
 			hm_insert(&new_hm, tmp->key, tmp->data);
 			prev = tmp;
 			tmp = tmp->next;
+
 			hn_free(prev);
 		}
 		hm_insert(&new_hm, tmp->key, tmp->data);
+
 		hn_free(tmp);
 	}
 
@@ -170,11 +167,15 @@ void *hm_get(HashMap *hm, char *key) {
 void hm_free(HashMap *hm) {
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
 		HMNode *bucket = hm->map[hm->idx_map[i]];
-		while (bucket->next != NULL) {
-			HMNode *tmp = bucket->next;
-			hn_free(bucket);
-			bucket = tmp;
+
+		HMNode *tmp = bucket;
+		HMNode *prev = tmp;
+		while (tmp->next != NULL) {
+			prev = tmp;
+			tmp = tmp->next;
+			hn_free(prev);
 		}
+		hn_free(tmp);
 	}
 	free(hm->map);
 	free(hm->idx_map);

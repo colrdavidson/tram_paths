@@ -350,7 +350,6 @@ int main() {
 	DynArr *line_list = flatten_map_keys(line_map);
 	for (u64 i = 0; i < 100000; i++) {
 		Route *route = find_best_route(map, line_list, "G", "Z");
-		print_route(route);
 		free_route(route);
 	}
 
