@@ -5,9 +5,21 @@
 
 #define DEBUG_FLAG 0
 #include "common.h"
+#include "file_helper.h"
 #include "hashmap.h"
 #include "dynarr.h"
 #include "pqueue.h"
+
+#if defined(DEBUG_FLAG) && DEBUG_FLAG == 2
+#define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: %s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##args)
+#elif defined(DEBUG_FLAG) && DEBUG_FLAG == 1
+#define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: " fmt, ##args)
+#else
+#define DEBUG_PRINT(fmt, args...)
+#endif
+
+#define FLOATVOID(x) ((void *)((u64)x))
+#define VOIDFLOAT(x) ((f32)((u64)x))
 
 char *file_next_line(File *file, u64 *idx) {
 	if (*idx >= file->size) {
@@ -107,6 +119,14 @@ void free_station(StationNode *node) {
 	free(node->line);
 	da_free(node->conn);
 	free(node);
+}
+
+char *station_lookup(char *station, char *line) {
+	char *lookup_str = calloc(strlen(station) + strlen(line) + 2, sizeof(char));
+	strcat(lookup_str, station);
+	strcat(lookup_str, "~");
+	strcat(lookup_str, line);
+	return lookup_str;
 }
 
 ConnNode *new_connection(StationNode *station, f32 time) {
