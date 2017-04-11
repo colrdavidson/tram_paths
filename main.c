@@ -3,20 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG_FLAG 0
 #include "common.h"
 #include "file_helper.h"
 #include "hashmap.h"
 #include "dynarr.h"
 #include "pqueue.h"
-
-#if defined(DEBUG_FLAG) && DEBUG_FLAG == 2
-#define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: %s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##args)
-#elif defined(DEBUG_FLAG) && DEBUG_FLAG == 1
-#define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: " fmt, ##args)
-#else
-#define DEBUG_PRINT(fmt, args...)
-#endif
 
 #define FLOATVOID(x) ((void *)((u64)x))
 #define VOIDFLOAT(x) ((f32)((u64)x))
@@ -372,7 +363,7 @@ int main() {
 	}
 
 	DynArr *line_list = flatten_map_keys(line_map);
-	for (u64 i = 0; i < 100000; i++) {
+	for (u64 i = 0; i < 100; i++) {
 		Route *route = find_best_route(map, line_list, "G", "Z");
 		free_route(route);
 	}

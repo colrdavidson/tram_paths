@@ -1,6 +1,8 @@
 #ifndef DYNARR_H
 #define DYNARR_H
 
+#include "common.h"
+
 typedef struct DynArr {
 	void **buffer;
 	u64 size;
@@ -22,7 +24,7 @@ DynArr *da_init() {
 bool da_insert(DynArr *da, void *data) {
 	if (data != NULL) {
 		if (da->capacity <= da->size) {
-			DEBUG_PRINT("[DA] growing capacity from %llu to %llu because size is %llu\n", da->capacity, da->size * 2, da->size);
+			debug("[DA] growing capacity from %llu to %llu because size is %llu\n", da->capacity, da->size * 2, da->size);
 			da->capacity = da->size * 2;
 			da->buffer = (void **)realloc(da->buffer, sizeof(void *) * da->capacity);
 		}

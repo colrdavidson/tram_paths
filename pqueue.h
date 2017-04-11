@@ -1,6 +1,9 @@
 #ifndef PQUEUE_H
 #define PQUEUE_H
 
+#include "common.h"
+#include "dynarr.h"
+
 #define GET_PARENT(i) (((i) - 1) / 2)
 #define GET_LEFT_CHILD(i) ((2 * (i)) + 1)
 #define GET_RIGHT_CHILD(i) ((2 * (i)) + 2)

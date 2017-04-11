@@ -1,6 +1,8 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
+#include "common.h"
+
 typedef struct HMNode {
 	struct HMNode *next;
 	char *key;
@@ -113,7 +115,7 @@ void hn_free_data(HMNode *bucket) {
 }
 
 HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
-	DEBUG_PRINT("[HM] growing capacity from %llu to %llu because size is %llu\n", hm->capacity, hm->capacity * 2, hm->size);
+	debug("[HM] growing capacity from %llu to %llu because size is %llu\n", hm->capacity, hm->capacity * 2, hm->size);
 	HashMap *new_hm = hm_sized_init(capacity);
 
 	for (u64 i = 0; i < hm->idx_map_size; i++) {
@@ -154,11 +156,11 @@ void *hm_get(HashMap *hm, char *key) {
 					return tmp->data;
 				}
 			}
-			DEBUG_PRINT("key %s, hm->map[%llu] is NULL?\n", key, idx);
+			debug("key %s, hm->map[%llu] is NULL?\n", key, idx);
 			return NULL;
 		}
 	} else {
-		DEBUG_PRINT("key %s, hm->map[%llu] is NULL?\n", key, idx);
+		debug("key %s, hm->map[%llu] is NULL?\n", key, idx);
 		return NULL;
 	}
 }
