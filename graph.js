@@ -1,11 +1,11 @@
 "use strict";
 
-var mouse_x = 0;
-var mouse_y = 0;
-var node_radius = 5;
-var conn_width = 5;
-var active_conn = null;
-var first_conn = true;
+let mouse_x = 0;
+let mouse_y = 0;
+let node_radius = 5;
+let conn_width = 5;
+let active_conn = null;
+let first_conn = true;
 
 function draw_line(ctx, x1, y1, x2, y2, width) {
 	ctx.beginPath();
@@ -56,29 +56,29 @@ class Bus {
 }
 
 function get_conn(conn_lookup, node1, node2) {
-	var lookup_str = node1.x + "|" + node1.y + "|" + node2.x + "|" + node2.y;
+	let lookup_str = node1.x + "|" + node1.y + "|" + node2.x + "|" + node2.y;
 	return conn_lookup[lookup_str];
 }
 
 function insert_conn(conn_lookup, conn) {
-	var lookup_str1 = conn.a.x + "|" + conn.a.y + "|" + conn.b.x + "|" + conn.b.y;
-	var lookup_str2 = conn.b.x + "|" + conn.b.y + "|" + conn.a.x + "|" + conn.a.y;
+	let lookup_str1 = conn.a.x + "|" + conn.a.y + "|" + conn.b.x + "|" + conn.b.y;
+	let lookup_str2 = conn.b.x + "|" + conn.b.y + "|" + conn.a.x + "|" + conn.a.y;
 	conn_lookup[lookup_str1] = conn;
 	conn_lookup[lookup_str2] = conn;
 }
 
 function reverse_conn(conn) {
-	var tmp_node = conn.a;
+	let tmp_node = conn.a;
 	conn.a = conn.b;
 	conn.b = tmp_node;
 }
 
 function walk(nodes, visited, cycle_stack, node, parent) {
-	var node_str = node.x + ", " + node.y;
+	let node_str = node.x + ", " + node.y;
 	visited[node_str] = true;
 
-	for (var i = 0; i < node.conn.length; i++) {
-		var tmp_str = node.conn[i].x + ", " + node.conn[i].y;
+	for (let i = 0; i < node.conn.length; i++) {
+		let tmp_str = node.conn[i].x + ", " + node.conn[i].y;
 		if (visited[tmp_str] == false) {
 			if (walk(nodes, visited, cycle_stack, node.conn[i], node)) {
 				return true;
@@ -92,15 +92,15 @@ function walk(nodes, visited, cycle_stack, node, parent) {
 }
 
 function detect_cycle(nodes) {
-	var visited = {};
-	var cycle_stack = [];
-	for (var i = 0; i < nodes.length; i++) {
-		var tmp_str = nodes[i].x + ", " + nodes[i].y;
+	let visited = {};
+	let cycle_stack = [];
+	for (let i = 0; i < nodes.length; i++) {
+		let tmp_str = nodes[i].x + ", " + nodes[i].y;
 		visited[tmp_str] = false;
 	}
 
-	for (var i = 0; i < nodes.length; i++) {
-		var tmp_str = nodes[i].x + ", " + nodes[i].y;
+	for (let i = 0; i < nodes.length; i++) {
+		let tmp_str = nodes[i].x + ", " + nodes[i].y;
 		if (visited[tmp_str] == false) {
 			if (walk(nodes, visited, cycle_stack, nodes[i], null)) {
 				return true;
@@ -117,31 +117,37 @@ function draw_node(ctx, x, y) {
 }
 
 function mouse_moved(canvas, event, nodes) {
-	var rect = canvas.getBoundingClientRect();
-	mouse_x = event.clientX - rect.left;
-	mouse_y = event.clientY - rect.top;
+	let rect = canvas.getBoundingClientRect();
+	let scale_x = canvas.width / rect.width;
+	let scale_y = canvas.height / rect.height;
+
+	mouse_x = Math.round((event.clientX - rect.left) * scale_x);
+	mouse_y = Math.round((event.clientY - rect.top) * scale_y);
 }
 
 function mouse_pressed(canvas, event, nodes, connections, conn_lookup, buses) {
-	var rect = canvas.getBoundingClientRect();
-	mouse_x = event.clientX - rect.left;
-	mouse_y = event.clientY - rect.top;
+	let rect = canvas.getBoundingClientRect();
+	let scale_x = canvas.width / rect.width;
+	let scale_y = canvas.height / rect.height;
+
+	mouse_x = Math.round((event.clientX - rect.left) * scale_x);
+	mouse_y = Math.round((event.clientY - rect.top) * scale_y);
 
 	if (event.button == 0) { // left click
-		var node_hit = false;
-		for (var i = 0; i < nodes.length; i++) {
-			var node_x = nodes[i].x;
-			var node_y = nodes[i].y;
+		let node_hit = false;
+		for (let i = 0; i < nodes.length; i++) {
+			let node_x = nodes[i].x;
+			let node_y = nodes[i].y;
 
-			var circle_test = Math.sqrt(Math.pow(Math.abs(mouse_x - node_x), 2) + Math.pow(Math.abs(mouse_y - node_y), 2));
+			let circle_test = Math.sqrt(Math.pow(Math.abs(mouse_x - node_x), 2) + Math.pow(Math.abs(mouse_y - node_y), 2));
 
 			if (circle_test < node_radius) {
 				if (active_conn == null) {
 					active_conn = nodes[i];
 				} else if (active_conn != nodes[i]) {
 					// Check for prexisting connection
-					var connection_exists = false;
-					for (var j = 0; j < connections.length; j++) {
+					let connection_exists = false;
+					for (let j = 0; j < connections.length; j++) {
 						if (((connections[j].a == active_conn) && (connections[j].b == nodes[i])) ||
 							((connections[j].a == nodes[i]) && (connections[j].b == active_conn))) {
 							connection_exists = true;
@@ -149,7 +155,7 @@ function mouse_pressed(canvas, event, nodes, connections, conn_lookup, buses) {
 					}
 
 					if (!connection_exists) {
-						var tmp_conn = new Connection(active_conn, nodes[i], 'blue');
+						let tmp_conn = new Connection(active_conn, nodes[i], 'blue');
 						connections.push(tmp_conn);
 						insert_conn(conn_lookup, tmp_conn);
 						active_conn.conn.push(nodes[i]);
@@ -172,22 +178,22 @@ function mouse_pressed(canvas, event, nodes, connections, conn_lookup, buses) {
 			active_conn = null;
 		}
 	} else if (event.button == 2) { // right click
-		for (var i = 0; i < nodes.length; i++) {
-			var node_x = nodes[i].x;
-			var node_y = nodes[i].y;
+		for (let i = 0; i < nodes.length; i++) {
+			let node_x = nodes[i].x;
+			let node_y = nodes[i].y;
 
-			var circle_test = Math.sqrt(Math.pow(Math.abs(mouse_x - node_x), 2) + Math.pow(Math.abs(mouse_y - node_y), 2));
+			let circle_test = Math.sqrt(Math.pow(Math.abs(mouse_x - node_x), 2) + Math.pow(Math.abs(mouse_y - node_y), 2));
 
 			if (circle_test < node_radius) {
 				return;
 			}
 		}
 
-		var tmp = new Node(mouse_x, mouse_y, 'white');
+		let tmp = new Node(mouse_x, mouse_y, 'white');
 		nodes.push(tmp);
 
 		if (active_conn != null) {
-			var tmp_conn = new Connection(active_conn, tmp, 'blue');
+			let tmp_conn = new Connection(active_conn, tmp, 'blue');
 			connections.push(tmp_conn);
 			insert_conn(conn_lookup, tmp_conn);
 			active_conn.conn.push(tmp);
@@ -217,28 +223,28 @@ function render(ctx, lerpy, nodes, connections, conn_lookup, buses) {
 		draw_line(ctx, active_conn.x, active_conn.y, mouse_x, mouse_y, conn_width);
 	}
 
-	for (var i = 0; i < connections.length; i++) {
+	for (let i = 0; i < connections.length; i++) {
 		ctx.strokeStyle = connections[i].color;
 		draw_line(ctx, connections[i].a.x, connections[i].a.y, connections[i].b.x, connections[i].b.y, conn_width);
 	}
 
-	for (var i = 0; i < buses.length; i++) {
-		var bus = buses[i];
+	for (let i = 0; i < buses.length; i++) {
+		let bus = buses[i];
         ctx.fillStyle = bus.color;
-		var bus_angle = bus.angle;
+		let bus_angle = bus.angle;
 		ctx.save();
 		ctx.translate(bus.x, bus.y);
 		ctx.rotate(bus.angle);
 		ctx.fillRect(0, 0, 20, 10);
 		ctx.restore();
 
-		var new_x = lerp(bus.x, bus.conn.b.x, lerpy);
-		var new_y = lerp(bus.y, bus.conn.b.y, lerpy);
+		let new_x = lerp(bus.x, bus.conn.b.x, lerpy);
+		let new_y = lerp(bus.y, bus.conn.b.y, lerpy);
 		if (lerpy >= 1) {
-			var reversed = false;
-			var old_b = bus.conn.b;
+			let reversed = false;
+			let old_b = bus.conn.b;
 			if (bus.conn.b.conn.length > 2) {
-				var next_station_idx = Math.floor(Math.random() * bus.conn.b.conn.length);
+				let next_station_idx = Math.floor(Math.random() * bus.conn.b.conn.length);
 				while (bus.conn.b == bus.conn.b.conn[next_station_idx]) {
 					next_station_idx = Math.floor(Math.random() * bus.conn.b.conn.length);
 				}
@@ -269,37 +275,37 @@ function render(ctx, lerpy, nodes, connections, conn_lookup, buses) {
 		buses[i].angle = bus.calc_angle();
 	}
 
-	for (var i = 0; i < nodes.length; i++) {
+	for (let i = 0; i < nodes.length; i++) {
 		ctx.fillStyle = nodes[i].color;
 		draw_node(ctx, nodes[i].x, nodes[i].y);
-		var tmp_str = nodes[i].x + ", " + nodes[i].y;
+		let tmp_str = nodes[i].x + ", " + nodes[i].y;
 		ctx.fillText(tmp_str, nodes[i].x, nodes[i].y - (node_radius * 2));
 	}
 }
 
 function start_graph() {
-	var canvas = document.getElementById('canvas');
+	let canvas = document.getElementById('canvas');
 	if (canvas.getContext) {
-		var ctx = canvas.getContext('2d');
+		let ctx = canvas.getContext('2d');
 
-		var width = 800;
-		var height = 800;
+		let width = 800;
+		let height = 800;
 
-		var nodes = [];
-		var connections = [];
-		var conn_lookup = { };
-		var buses = [];
+		let nodes = [];
+		let connections = [];
+		let conn_lookup = { };
+		let buses = [];
 
 		canvas.addEventListener("mousemove", function(evt) { mouse_moved(canvas, evt, nodes); }, false);
 		canvas.addEventListener("mousedown", function(evt) { mouse_pressed(canvas, evt, nodes, connections, conn_lookup, buses); }, false);
 		canvas.oncontextmenu = function (evt) { evt.preventDefault(); };
 
 
-		var last_time = Date.now();
-		var dt = 0;
-		var lerpy = 0;
+		let last_time = Date.now();
+		let dt = 0;
+		let lerpy = 0;
 		function draw_graph(step) {
-			var time_now = Date.now();
+			let time_now = Date.now();
 			dt = (time_now - last_time) / 1000;
 			last_time = time_now;
 

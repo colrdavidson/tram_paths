@@ -1,19 +1,88 @@
+html, body {
+	height: 100%;
+}
+
 body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: flex-start;
 
+	margin: 0;
+
 	background-color: grey;
 }
 
 #graph_root {
+	display: flex;
+	flex-direction: row;
+
+	background-color: dimgrey;
+	border: 1px solid #666;
+	border-radius: 3px;
+
+	padding: 0.5em;
+}
+
+#bus_root {
+	background-color: grey;
+
+	margin-right: 0.5em;
+	width: 15em;
+	overflow-y: auto;
+}
+
+.bus_container {
 	background-color: lightgrey;
 	border: 1px solid #666;
 	border-radius: 3px;
 
-	padding: 1em;
+	margin: 0.25em;
+	padding: 0.5em;
+}
+
+.bus_container > h3, h4 {
+	text-align: center;
+}
+
+.bus_container > h3 {
+	margin: 0;
+}
+
+.bus_container > ul {
+	margin-top: 0.25em;
+}
+
+.bus_container > h4 {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.stops_root {
+	background-color: grey;
+	border: 1px solid #666;
 	border-radius: 3px;
+
+	max-height: 10em;
+	margin: 0.25em;
+	padding: 0.125em;
+
+	overflow-y: auto;
+}
+
+.stop_container {
+	background-color: lightgrey;
+	border: 1px solid #666;
+	border-radius: 3px;
+
+	margin: 0.125em;
+	padding: 0.25em;
+}
+
+.stop_container > p {
+	text-align: center;
+	margin: 0;
+	padding: 0;
 }
 
 #instructions {
@@ -23,6 +92,7 @@ body {
 
 	padding: 1em;
 	margin-top: 0.5em;
+	margin-bottom: 0.5em;
 }
 
 #instructions > p {
