@@ -1,8 +1,16 @@
 <html>
 	<head>
 		<script src="graph.js"></script>
+		<link rel="stylesheet" href="graph.css"/>
 	</head>
 	<body onload="start_graph()">
-		<canvas id="canvas" width="800" height="800"></canvas>
+		<h2>Bus Route Creation Tool</h2>
+		<div id="graph_root">
+			<canvas id="canvas" width="800" height="800"></canvas>
+		</div>
+		<div id="instructions">
+			<p>Right click to place a node</p>
+			<p>Left click to attach an edge</p>
+		</div>
 	</body>
 </html>
