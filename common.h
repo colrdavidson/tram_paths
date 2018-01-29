@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include "time.h"
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -50,5 +51,14 @@ u64 common_rdtsc() {
 	return -1;
 }
 #endif
+
+u64 get_time_ms() {
+    struct timespec tms;
+	clock_gettime(CLOCK_MONOTONIC, &tms);
+
+	u64 millis = tms.tv_sec * 1000;
+	millis += tms.tv_nsec / 1000000;
+	return millis;
+}
 
 #endif

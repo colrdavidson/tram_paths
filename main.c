@@ -48,8 +48,10 @@ DynArr *read_all_lines(File *file) {
 
 void print_lines(DynArr *da) {
 	for (u64 i = 0; i < da->size; i++) {
-		printf("[%llu] %s", i, (char *)(da->buffer[i]));
+		printf("[%llu] %s\n", i, (char *)(da->buffer[i]));
 	}
+
+	printf("\n");
 }
 
 typedef struct Route {
@@ -327,6 +329,7 @@ int main() {
 	DynArr *file_lines = read_all_lines(station_file);
 	HashMap *map = hm_init();
 	HashMap *line_map = hm_init();
+	HashMap *station_map = hm_init();
 
 	for (u64 i = 0; i < file_lines->size; i++) {
 		char station1[257] = {0};
@@ -346,6 +349,9 @@ int main() {
 
 		hm_insert(&line_map, line1, (void *)1);
 		hm_insert(&line_map, line2, (void *)1);
+
+		hm_insert(&station_map, station1, (void *)1);
+		hm_insert(&station_map, station2, (void *)1);
 	}
 
 	for (u64 i = 0; i < file_lines->size; i++) {
@@ -363,8 +369,10 @@ int main() {
 	}
 
 	DynArr *line_list = flatten_map_keys(line_map);
-	for (u64 i = 0; i < 100; i++) {
+
+	for (u64 i = 0; i < 1; i++) {
 		Route *route = find_best_route(map, line_list, "G", "Z");
+		print_route(route);
 		free_route(route);
 	}
 
