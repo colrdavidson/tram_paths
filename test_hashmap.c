@@ -1,6 +1,6 @@
 #define DEBUG
 
-#include "new_hashmap.h"
+#include "hashmap.h"
 #include "stdlib.h"
 #include "assert.h"
 
@@ -21,20 +21,17 @@ int main() {
 
 	printf("Built dataset!\n");
 
-	HashMap *map = hm_sized_init(test_size);
+	HashMap *map = hm_sized_init(test_size * 2);
 	for (u64 i = 0; i < 5; i++) {
 		char *key = keys[i];
 
-		ret = hm_insert(&map, key, (void *)"floopy");
+		hm_insert(&map, key, (void *)"floopy");
+		hm_insert(&map, key, (void *)"floopy");
+
+		ret = hm_remove(map, key);
 		assert(ret == true);
 
-		ret = hm_insert(&map, key, (void *)"floopy");
-		assert(ret == false);
-
-		ret = hm_remove(&map, key);
-		assert(ret == true);
-
-		ret = hm_remove(&map, key);
+		ret = hm_remove(map, key);
 		assert(ret == false);
 	}
 	printf("Finished quick check\n");
@@ -43,8 +40,7 @@ int main() {
 	for (u64 i = 0; i < test_size; i++) {
 		char *key = keys[i];
 		char *datum = data[i];
-		ret = hm_insert(&map, key, (void *)datum);
-		assert(ret == true);
+		hm_insert(&map, key, (void *)datum);
 	}
 	printf("Allocation took: %llu ms\n", get_time_ms() - start);
 
@@ -60,7 +56,7 @@ int main() {
 	start = get_time_ms();
 	for (u64 i = 0; i < test_size; i++) {
 		char *key = keys[i];
-		ret = hm_remove(&map, key);
+		ret = hm_remove(map, key);
 		assert(ret == true);
 	}
 	printf("Removal took: %llu ms\n", get_time_ms() - start);

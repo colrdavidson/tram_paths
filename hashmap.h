@@ -61,33 +61,34 @@ void print_hm(HashMap *hm) {
 }
 
 char *hm_iter_key(HashMap *hm, HMIter *iter) {
-	if (iter->idx < hm->idx_map_size) {
-		if (iter->cur == NULL) {
-			iter->cur = hm->map[hm->idx_map[iter->idx]];
-			return iter->cur->key;
-		}
-
-		if (iter->cur->next == NULL) {
-			iter->idx += 1;
-			if (iter->idx == hm->idx_map_size) {
-				return NULL;
-			}
-
-			iter->cur = hm->map[hm->idx_map[iter->idx]];
-			return iter->cur->key;
-		} else {
-			iter->cur = iter->cur->next;
-			return iter->cur->key;
-		}
+	if (iter->idx >= hm->idx_map_size) {
+		return NULL;
 	}
 
-	return NULL;
+	if (!iter->cur) {
+		iter->cur = hm->map[hm->idx_map[iter->idx]];
+		return iter->cur->key;
+	}
+
+	if (iter->cur->next) {
+		iter->cur = iter->cur->next;
+		return iter->cur->key;
+	}
+
+	iter->idx++;
+	if (iter->idx == hm->idx_map_size) {
+		return NULL;
+	}
+
+	iter->cur = hm->map[hm->idx_map[iter->idx]];
+	return iter->cur->key;
 }
 
 
 u64 hm_hash(HashMap *hm, char *key) {
 	u64 hash = 0;
-	for (u32 i = 0; i < strlen(key); i++) {
+	u64 key_len = strlen(key);
+	for (u32 i = 0; i < key_len; i++) {
 		hash = (hash << 4) ^ (hash >> 28) ^ (u64)key[i];
 	}
 	hash = hash % hm->capacity;
@@ -105,37 +106,35 @@ HMNode *new_hmnode(char *key, void *value) {
 
 HashMap *hm_grow_capacity(HashMap *hm, u64 capacity);
 
-bool hm_insert(HashMap **hm, char *key, void *value) {
+void hm_insert(HashMap **hm, char *key, void *value) {
     if ((*hm)->size > (((*hm)->capacity >> 2) + ((*hm)->capacity >> 1))) {
 		*hm = hm_grow_capacity(*hm, (*hm)->capacity * 2);
 	}
 
 	u64 idx = hm_hash(*hm, key);
-	if ((*hm)->map[idx] == NULL) {
+	if (!((*hm)->map[idx])) {
 		(*hm)->map[idx] = new_hmnode(key, value);
 		(*hm)->idx_map[(*hm)->idx_map_size] = idx;
 		(*hm)->idx_map_size++;
-	} else if (strcmp((*hm)->map[idx]->key, key) != 0) {
-		HMNode *tmp = (*hm)->map[idx];
-
-		while (tmp->next != NULL) {
-			if (strcmp(tmp->key, key) == 0) {
-				return false;
-			}
-			tmp = tmp->next;
-		}
-
-		if (strcmp(tmp->key, key) == 0) {
-			return false;
-		}
-
-		tmp->next = new_hmnode(key, value);
-	} else {
-		return false;
+		(*hm)->size++;
+		return;
 	}
 
+	HMNode *tmp = (*hm)->map[idx];
+	if (!strcmp(tmp->key, key)) {
+		return;
+	}
+
+	while (tmp->next) {
+		tmp = tmp->next;
+		if (!strcmp(tmp->key, key)) {
+			return;
+		}
+	}
+
+
+	tmp->next = new_hmnode(key, value);
 	(*hm)->size++;
-	return true;
 }
 
 void hn_free(HMNode *bucket) {
@@ -156,16 +155,14 @@ HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
 		HMNode *bucket = hm->map[hm->idx_map[i]];
 
 		HMNode *tmp = bucket;
-		HMNode *prev = tmp;
-		while (tmp->next != NULL) {
+		while (tmp->next) {
 			hm_insert(&new_hm, tmp->key, tmp->data);
-			prev = tmp;
-			tmp = tmp->next;
 
+			HMNode *prev = tmp;
+			tmp = tmp->next;
 			hn_free(prev);
 		}
 		hm_insert(&new_hm, tmp->key, tmp->data);
-
 		hn_free(tmp);
 	}
 
@@ -175,88 +172,60 @@ HashMap *hm_grow_capacity(HashMap *hm, u64 capacity) {
 	return new_hm;
 }
 
-HMNode *_hm_get(HashMap *hm, char *key) {
-	u64 idx = hm_hash(hm, key);
+static HMNode *_hm_get(HashMap *hm, u64 idx, char *key) {
 
 	HMNode *bucket = hm->map[idx];
-	if (bucket != NULL) {
-		if (strcmp(bucket->key, key) == 0) {
-			return bucket;
-		} else {
-			HMNode *tmp = bucket;
-			while (tmp->next != NULL) {
-				tmp = tmp->next;
-				if (strcmp(tmp->key, key) == 0) {
-					return tmp;
-				}
-			}
-			debug("key %s, hm->map[%llu] is NULL?\n", key, idx);
-			return NULL;
-		}
-	} else {
-		debug("key %s, hm->map[%llu] is NULL?\n", key, idx);
+	if (!bucket) {
+		debug("1 key %s, hm->map[%llu] is NULL?\n", key, idx);
 		return NULL;
 	}
+
+	if (!strcmp(bucket->key, key)) {
+		return bucket;
+	}
+
+	HMNode *tmp = bucket;
+	while (tmp->next) {
+		tmp = tmp->next;
+		if (!strcmp(tmp->key, key)) {
+			return tmp;
+		}
+	}
+	debug("2 key %s, hm->map[%llu] is NULL?\n", key, idx);
+	return NULL;
 }
 
 void *hm_get(HashMap *hm, char *key) {
-	HMNode *ret = _hm_get(hm, key);
-	if (ret != NULL) {
+	u64 idx = hm_hash(hm, key);
+	HMNode *ret = _hm_get(hm, idx, key);
+	if (ret) {
 		return ret->data;
 	}
 
 	return NULL;
 }
 
-bool idx_map_del(u64 *idx_map, u64 *idx_map_size, u64 idx) {
-	u64 size = *idx_map_size;
-    if (size == 0) {
-		return false;
-	}
-
-	u64 idx_idx = 0;
-	bool broke = false;
-	for (; idx_idx < size; idx_idx++) {
-		if (idx_map[idx_idx] == idx) {
-			broke = true;
-			break;
-		}
-	}
-
-	if (idx_idx > size || broke != true || (idx_map[idx_idx] == (u64)-1)) {
-		return false;
-	}
-
-	for (u64 i = idx_idx; i < size; i++) {
-		idx_map[i] = idx_map[i + 1];
-	}
-	idx_map[size] = -1;
-
-	*idx_map_size -= 1;
-
-	return true;
-}
-
-bool hm_remove(HashMap **hm, char *key) {
-	HMNode *node = _hm_get(*hm, key);
-	if (node == NULL) {
+bool hm_remove(HashMap *hm, char *key) {
+	u64 idx = hm_hash(hm, key);
+	HMNode *node = _hm_get(hm, idx, key);
+	if (!node) {
 		return false;
 	}
 
 	HMNode *tmp = node->next;
-	u64 idx = hm_hash(*hm, key);
 
-	if (tmp == NULL) {
-		bool ret = idx_map_del((*hm)->idx_map, &(*hm)->idx_map_size, idx);
+	if (!tmp) {
+		u64 size = hm->idx_map_size;
+		u64 *idx_map = hm->idx_map;
 
-		if (ret == false) {
-			return false;
-		}
+		idx_map[idx] = idx_map[size - 1];
+		idx_map[size] = -1;
+		hm->idx_map_size -= 1;
 	}
 
 	hn_free(node);
-	(*hm)->map[idx] = tmp;
-	(*hm)->size--;
+	hm->map[idx] = tmp;
+	hm->size--;
 
 	return true;
 }
@@ -267,7 +236,7 @@ void hm_free(HashMap *hm) {
 
 		HMNode *tmp = bucket;
 		HMNode *prev = tmp;
-		while (tmp->next != NULL) {
+		while (tmp->next) {
 			prev = tmp;
 			tmp = tmp->next;
 			hn_free(prev);
@@ -285,7 +254,7 @@ void hm_free_data(HashMap *hm) {
 
 		HMNode *tmp = bucket;
 		HMNode *prev = tmp;
-		while (tmp->next != NULL) {
+		while (tmp->next) {
 			prev = tmp;
 			tmp = tmp->next;
 			hn_free_data(prev);
