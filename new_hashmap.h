@@ -87,7 +87,8 @@ char *hm_iter_key(HashMap *hm, HMIter *iter) {
 
 u64 hm_hash(HashMap *hm, char *key) {
 	u64 hash = 0;
-	for (u32 i = 0; i < strlen(key); i++) {
+	u64 key_len = strlen(key);
+	for (u32 i = 0; i < key_len; i++) {
 		hash = (hash << 4) ^ (hash >> 28) ^ (u64)key[i];
 	}
 	hash = hash % hm->capacity;
@@ -210,35 +211,6 @@ void *hm_get(HashMap *hm, char *key) {
 	return NULL;
 }
 
-bool idx_map_del(u64 *idx_map, u64 *idx_map_size, u64 idx) {
-	u64 size = *idx_map_size;
-    if (!size) {
-		return false;
-	}
-
-	u64 idx_idx = 0;
-	bool broke = false;
-	for (; idx_idx < size; idx_idx++) {
-		if (idx_map[idx_idx] == idx) {
-			broke = true;
-			break;
-		}
-	}
-
-	if (idx_idx > size || broke != true || (idx_map[idx_idx] == (u64)-1)) {
-		return false;
-	}
-
-	for (u64 i = idx_idx; i < size; i++) {
-		idx_map[i] = idx_map[i + 1];
-	}
-
-	idx_map[size] = -1;
-	*idx_map_size -= 1;
-
-	return true;
-}
-
 bool hm_remove(HashMap **hm, char *key) {
 	HMNode *node = _hm_get(*hm, key);
 	if (!node) {
@@ -249,11 +221,12 @@ bool hm_remove(HashMap **hm, char *key) {
 	u64 idx = hm_hash(*hm, key);
 
 	if (!tmp) {
-		bool ret = idx_map_del((*hm)->idx_map, &(*hm)->idx_map_size, idx);
+		u64 size = (*hm)->idx_map_size;
+		u64 *idx_map = (*hm)->idx_map;
 
-		if (!ret) {
-			return false;
-		}
+		idx_map[idx] = idx_map[size - 1];
+		idx_map[size] = -1;
+		(*hm)->idx_map_size -= 1;
 	}
 
 	hn_free(node);
