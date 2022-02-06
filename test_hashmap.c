@@ -1,3 +1,5 @@
+#define DEBUG
+
 #include "hashmap.h"
 #include "stdlib.h"
 #include "assert.h"
@@ -13,7 +15,7 @@ int main() {
 		keys[i] = key;
 	}
 
-	HashMap *map = hm_init();
+	HashMap *map = hm_sized_init(test_size);
 	for (u64 i = 0; i < 5; i++) {
 		char *key = keys[i];
 
@@ -38,6 +40,15 @@ int main() {
 		assert(ret == true);
 	}
 	printf("Allocation took: %llu ms\n", get_time_ms() - start);
+
+	start = get_time_ms();
+	for (u64 i = 0; i < test_size; i++) {
+		char *key = keys[i];
+		char *result = (char *)hm_get(map, key);
+		assert(result != NULL);
+		assert(result[0] == 'f');
+	}
+	printf("Indexing took: %llu ms\n", get_time_ms() - start);
 
 	start = get_time_ms();
 	for (u64 i = 0; i < test_size; i++) {
